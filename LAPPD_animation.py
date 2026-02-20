@@ -10,9 +10,12 @@ import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation, PillowWriter
 import time
 
+# Record start time
+start_time = time.perf_counter()
+
 # gif file info
-filePath = '/Users/trey/Desktop/Razikave/'
-fileName = f"{filePath}HighContrast_claude_LAPPD_animation.gif"
+filePath = '/Users/trey/Desktop/Razikave/Detector animations'
+fileName = f"{filePath}HighContrast_LAPPD_animation.gif"
 
 # Graphics params
 numFrames = 900
@@ -30,7 +33,7 @@ channelColor = 'cornflowerblue'
 backplateColor = 'brown'
 vacuumColor = 'black'
 
-# Layer thicknesses (same as before)
+# Layer thicknesses 
 abovePhotocathode = 2600 #μm
 photocathodeThick = 400 #μm
 vacuumMiddle = 1190 #μm
@@ -52,13 +55,13 @@ wallTolerance = 30
 topAdj = 7 # adjust the top to truly align with the MCP
 bottomAdj = 30 #same for the bottom
 
-# Physics parameters - slowed down by ~50%
+# Physics parameters
 photonSize = 3
 electronSize = 2
-photonVelocity = 30  # Reduced from 60
-electronVelocity = 15  # Reduced from 30
-e_field_acceleration = 5  # Reduced from 10
-bounceSidewaysV = 35  # Reduced from 70
+photonVelocity = 30  
+electronVelocity = 15  
+e_field_acceleration = 5  
+bounceSidewaysV = 35
 bounceHeightCoeff = 0.5
 electronsPerCollision = 2
 MAX_ELECTRONS = 1000
@@ -82,8 +85,6 @@ photocathodeTop = photocathodeBottom + photocathodeThick
 emptyTopStart = photocathodeTop
 emptyTopEnd = emptyTopStart + abovePhotocathode
 
-# Record start time
-start_time = time.perf_counter()
 
 # Create figure
 fig, ax = plt.subplots(figsize=(6, 8))
@@ -388,7 +389,7 @@ yμm = ax.get_yticks()
 #convert to mm, ignore the last point outside of the plot
 ymm = yμm[:-1]/1000
 
-# fix the photocathode inaccuracy (scale is a lie above the bottom of the photocathode, it's not 400μm thick)
+# fix the photocathode inaccuracy (scale is a lie above the bottom of the photocathode, it's not really 400μm thick)
 yμm[-2] = photocathodeBottom
 ymm[-1] = photocathodeBottom/1000
 
