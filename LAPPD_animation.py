@@ -19,7 +19,7 @@ numFrames = 200  # reduce for testing
 fps = 30
 
 # Particle coloring
-photonColor = 'lightblue'
+photonColor = 'blue'
 photoelectronColor = 'gold'
 
 # Layer colors
@@ -31,33 +31,35 @@ backplateColor = 'brown'
 vacuumColor = 'lavender'
 
 # Layer thicknesses
-abovePhotocathode = 2000
-photocathodeThick = 400
-vacuumMiddle = 1190
-mcpThick = 1500
-mcp1to2gap = 1000
-vacuumBottom = 2500
-backplateThick = 2000
+abovePhotocathode = 2500 #μm
+photocathodeThick = 400 #μm
+vacuumMiddle = 1190 #μm
+mcpThick = 600 #μm
+mcp1to2gap = 1370 #μm
+vacuumBottom = 3000 #μm
+backplateThick = 2000 #μm
 
 # Plotframe parameters
 height = abovePhotocathode + photocathodeThick + vacuumMiddle + mcpThick + mcp1to2gap + mcpThick + vacuumBottom + backplateThick
 width = (height/3)*4
 
 # Channel parameters
-channelAngle = 20
-channelDiameter = 700
-numChannels = 12
+channelAngle = 20 # deg
+channelDiameter = 175 
+numChannels = 60
 wallTolerance = 30  # Increased to catch fast-moving electrons
-labelSpacingFactor = 1.5
+labelSpacingFactor = 5
+topAdj = 8 # adjust the top to truly align with the MCP
+bottomAdj = 20 #same for the bottom
 
 # Physics parameters
-photonSize = 6
-electronSize = 3
-photonVelocity = 50
-electronVelocity = 40
-e_field_acceleration = 5  
+photonSize = 3
+electronSize = 1
+photonVelocity = 50 # μm/frame
+electronVelocity = 40 # μm/frame
+e_field_acceleration = 10  # μm^2 / frame
 electronsPerCollision = 3
-MAX_ELECTRONS = 500      # Reduce for testing
+MAX_ELECTRONS = 1000    # Reduce for testing
 
 # Calculate layer positions
 emptyTopStart = 0
@@ -118,15 +120,15 @@ for i in range(numChannels):
     cx_top1 = (i + labelSpacingFactor) * channel_spacing
     cx_bot1 = cx_top1 + mcpThick * np.tan(mcp1_channel_angle_rad)
     
-    mcp1_pts = np.array([[cx_top1 - channelDiameter/2, mcp1Top], [cx_top1 + channelDiameter/2, mcp1Top],
-                         [cx_bot1 + channelDiameter/2, mcp1Bottom], [cx_bot1 - channelDiameter/2, mcp1Bottom]])
+    mcp1_pts = np.array([[cx_top1 - channelDiameter/2, mcp1Top-topAdj], [cx_top1 + channelDiameter/2, (mcp1Top-topAdj)],
+                         [cx_bot1 + channelDiameter/2, mcp1Bottom-bottomAdj], [cx_bot1 - channelDiameter/2, (mcp1Bottom-bottomAdj)]])
     ax.add_patch(patches.Polygon(mcp1_pts, color=channelColor, edgecolor='black', linewidth=0.5))
     
     cx_top2 = cx_bot1
     cx_bot2 = cx_top2 + mcpThick * np.tan(mcp2_channel_angle_rad)
     
-    mcp2_pts = np.array([[cx_top2 - channelDiameter/2, mcp2Top], [cx_top2 + channelDiameter/2, mcp2Top],
-                         [cx_bot2 + channelDiameter/2, mcp2Bottom], [cx_bot2 - channelDiameter/2, mcp2Bottom]])
+    mcp2_pts = np.array([[cx_top2 - channelDiameter/2, mcp2Top-topAdj], [cx_top2 + channelDiameter/2, mcp2Top-topAdj],
+                         [cx_bot2 + channelDiameter/2, mcp2Bottom-bottomAdj], [cx_bot2 - channelDiameter/2, mcp2Bottom-bottomAdj]])
     ax.add_patch(patches.Polygon(mcp2_pts, color=channelColor, edgecolor='black', linewidth=0.5))
 
 ax.add_patch(patches.Rectangle((0, 0), width, backplateBottom, linewidth=2, edgecolor='black', facecolor='none'))
@@ -306,6 +308,9 @@ def update(frame):
 # Create and save animation
 ani = FuncAnimation(fig, update, frames=np.arange(numFrames), blit=True, interval=50)
 ax.legend(loc='upper right', fontsize=8)
+
+#hide the nonsense on the x axis
+ax.get_xaxis().set_visible(False)
 
 print("Generating Avalanche...")
 
