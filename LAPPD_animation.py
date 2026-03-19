@@ -10,16 +10,13 @@ import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation, PillowWriter
 import time
 
-# Record start time
-start_time = time.perf_counter()
-
 # gif file info
-filePath = '/Users/trey/Desktop/Razikave/Detector animations'
-fileName = f"{filePath}HighContrast_LAPPD_animation.gif"
+filePath = './'
+fileName = f"{filePath}claude_LAPPD_animation.gif"
 
 # Graphics params
-numFrames = 900
-fps = 60
+numFrames = 300
+fps = 30
 
 # Particle coloring
 photonColor = 'blue'
@@ -33,8 +30,8 @@ channelColor = 'cornflowerblue'
 backplateColor = 'brown'
 vacuumColor = 'black'
 
-# Layer thicknesses 
-abovePhotocathode = 2600 #μm
+# Layer thicknesses
+abovePhotocathode = 2500 #μm
 photocathodeThick = 400 #μm
 vacuumMiddle = 1190 #μm
 mcpThick = 600 #μm
@@ -50,7 +47,6 @@ width = (height/3)*4
 channelAngle = 20 # deg
 numChannels = 32
 channelDiameter = (width * 0.6)/numChannels
-xOffset = channelDiameter/2 # properly centers the channels in the MCP
 wallTolerance = 30
 topAdj = 7 # adjust the top to truly align with the MCP
 bottomAdj = 30 #same for the bottom
@@ -58,64 +54,65 @@ bottomAdj = 30 #same for the bottom
 # Physics parameters
 photonSize = 3
 electronSize = 2
-photonVelocity = 30  
-electronVelocity = 15  
-e_field_acceleration = 5  
-bounceSidewaysV = 35
-bounceHeightCoeff = 0.5
+photonVelocity = 60 # μm/frame
+electronVelocity = 30 # μm/frame
+e_field_acceleration = 10  # μm^2 / frame
+bounceSidewaysV = 70
+bounceHeightCoeff = 0.5 # turn down the vertical bounce without turning up the acceleration
 electronsPerCollision = 2
 MAX_ELECTRONS = 1000
-SUB_STEPS = 5
+SUB_STEPS = 5  # Number of sub-steps per frame for collision detection
+anodeReflectionChance = 0.05  # 5% chance electron reflects from anode
 
-# Calculate layer positions FROM BOTTOM UP (backplate at y=0)
-backplateBottom = 0
-backplateTop = backplateBottom + backplateThick
-vacuumBottomBottom = backplateTop
-vacuumBottomTop = vacuumBottomBottom + vacuumBottom
-mcp2Bottom = vacuumBottomTop
-mcp2Top = mcp2Bottom + mcpThick
-mcpGapBottom = mcp2Top
-mcpGapTop = mcpGapBottom + mcp1to2gap
-mcp1Bottom = mcpGapTop
-mcp1Top = mcp1Bottom + mcpThick
-vacuumMiddleBottom = mcp1Top
-vacuumTop = vacuumMiddleBottom + vacuumMiddle
-photocathodeBottom = vacuumTop
-photocathodeTop = photocathodeBottom + photocathodeThick
-emptyTopStart = photocathodeTop
-emptyTopEnd = emptyTopStart + abovePhotocathode
+# Calculate layer positions
+emptyTopStart = 0
+photocathodeTop = abovePhotocathode
+photocathodeBottom = photocathodeTop + photocathodeThick
+vacuumTop = photocathodeBottom
+vacuumMiddleBottom = vacuumTop + vacuumMiddle
+mcp1Top = vacuumMiddleBottom
+mcp1Bottom = mcp1Top + mcpThick
+mcpGapTop = mcp1Bottom
+mcpGapBottom = mcpGapTop + mcp1to2gap
+mcp2Top = mcpGapBottom
+mcp2Bottom = mcp2Top + mcpThick
+vacuumBottomTop = mcp2Bottom
+vacuumBottomBottom = vacuumBottomTop + vacuumBottom
+backplateTop = vacuumBottomBottom
+backplateBottom = backplateTop + backplateThick
 
+# Record start time
+start_time = time.perf_counter()
 
 # Create figure
 fig, ax = plt.subplots(figsize=(6, 8))
 ax.set_xlim(0, width)
-ax.set_ylim(0, emptyTopEnd)
-ax.set_ylabel("mm")
+ax.set_ylim(0, backplateBottom)
+ax.set_xlabel("μm")
+ax.set_ylabel("μm")
 ax.set_aspect('equal')
+ax.invert_yaxis()  # Invert so top is at top
 plt.title("LAPPD")
 
-# Draw layers (from bottom up)
+# Draw layers
 ax.add_patch(patches.Rectangle((0, emptyTopStart), width, abovePhotocathode, color=topColor, label="Outside"))
-ax.add_patch(patches.Rectangle((0, photocathodeBottom), width, photocathodeThick, color=photocathodeColor))
-ax.add_patch(patches.Rectangle((0, vacuumMiddleBottom), width, vacuumMiddle, color=vacuumColor, label="Vacuum"))
-ax.add_patch(patches.Rectangle((0, mcp1Bottom), width, mcpThick, color=mcpBodyColor))
-ax.add_patch(patches.Rectangle((0, mcpGapBottom), width, mcp1to2gap, color=vacuumColor))
-ax.add_patch(patches.Rectangle((0, mcp2Bottom), width, mcpThick, color=mcpBodyColor))
-ax.add_patch(patches.Rectangle((0, vacuumBottomBottom), width, vacuumBottom, color=vacuumColor))
-ax.add_patch(patches.Rectangle((0, backplateBottom), width, backplateThick, color=backplateColor))
+ax.add_patch(patches.Rectangle((0, photocathodeTop), width, photocathodeThick, color=photocathodeColor))
+ax.add_patch(patches.Rectangle((0, vacuumTop), width, vacuumMiddle, color=vacuumColor, label="Vacuum"))
+ax.add_patch(patches.Rectangle((0, mcp1Top), width, mcpThick, color=mcpBodyColor))
+ax.add_patch(patches.Rectangle((0, mcpGapTop), width, mcp1to2gap, color=vacuumColor))
+ax.add_patch(patches.Rectangle((0, mcp2Top), width, mcpThick, color=mcpBodyColor))
+ax.add_patch(patches.Rectangle((0, vacuumBottomTop), width, vacuumBottom, color=vacuumColor))
+ax.add_patch(patches.Rectangle((0, backplateTop), width, backplateThick, color=backplateColor))
 
 # Label the important layers
-ax.annotate(' Outside', xy=(5, emptyTopStart + abovePhotocathode/2),
-            color='black', fontsize=8, ha = 'left', va='center')
-ax.annotate(' Photocathode', xy=(5, photocathodeBottom + photocathodeThick/2), 
+ax.annotate(' Photocathode', xy=(5, photocathodeTop + photocathodeThick/2), 
             color='white', fontsize=8, ha='left', va='center')
-ax.annotate(' MCP1', xy=(5, mcp1Bottom + mcpThick/2), 
-            color='black', fontsize=8, ha='left', va='center')
-ax.annotate(' MCP2', xy=(5, mcp2Bottom + mcpThick/2),
-            color='black', fontsize=8, ha='left', va='center')
-ax.annotate(' Anode', xy=(5, backplateBottom + backplateThick/2), 
+ax.annotate(' MCP1', xy=(5, mcp1Top + mcpThick/2), 
             color='white', fontsize=8, ha='left', va='center')
-
+ax.annotate(' MCP2', xy=(5, mcp2Top + mcpThick/2),
+            color='white', fontsize=8, ha='left', va='center')
+ax.annotate(' Anode', xy=(5, backplateTop + backplateThick/2), 
+            color='white', fontsize=8, ha='left', va='center')
 
 # Draw channels
 mcp1_channel_angle_rad = np.radians(channelAngle)
@@ -123,62 +120,58 @@ mcp2_channel_angle_rad = -mcp1_channel_angle_rad
 channel_spacing = width / numChannels
 
 for i in range(numChannels):
-    # MCP1 channels (angled from bottom to top)
-    cx_bot1 = i * channel_spacing
-    cx_top1 = cx_bot1 + mcpThick * np.tan(mcp1_channel_angle_rad)
+    cx_top1 = i * channel_spacing
+    cx_bot1 = cx_top1 + mcpThick * np.tan(mcp1_channel_angle_rad)
     
-    mcp1_pts = np.array([[(cx_bot1 - channelDiameter/2)+xOffset, mcp1Bottom+bottomAdj], [(cx_bot1 + channelDiameter/2)+xOffset, mcp1Bottom+bottomAdj],
-                         [(cx_top1 + channelDiameter/2)+xOffset, mcp1Top+topAdj], [(cx_top1 - channelDiameter/2)+xOffset, mcp1Top+topAdj]])
-    ax.add_patch(patches.Polygon(mcp1_pts, color=channelColor, edgecolor='black', linewidth=0.5)) 
+    mcp1_pts = np.array([[cx_top1 - channelDiameter/2, mcp1Top-topAdj], [cx_top1 + channelDiameter/2, (mcp1Top-topAdj)],
+                         [cx_bot1 + channelDiameter/2, mcp1Bottom-bottomAdj], [cx_bot1 - channelDiameter/2, (mcp1Bottom-bottomAdj)]])
+    ax.add_patch(patches.Polygon(mcp1_pts, color=channelColor, edgecolor='black', linewidth=0.5))
     
-    # MCP2 channels (opposite angle)
-    cx_bot2 = cx_top1
-    cx_top2 = cx_bot2 + mcpThick * np.tan(mcp2_channel_angle_rad)
+    cx_top2 = cx_bot1
+    cx_bot2 = cx_top2 + mcpThick * np.tan(mcp2_channel_angle_rad)
     
-    mcp2_pts = np.array([[(cx_bot2 - channelDiameter/2)+xOffset, mcp2Bottom+bottomAdj], [(cx_bot2 + channelDiameter/2)+xOffset, mcp2Bottom+bottomAdj],
-                         [(cx_top2 + channelDiameter/2)+xOffset, mcp2Top+topAdj], [(cx_top2 - channelDiameter/2)+xOffset, mcp2Top+topAdj]])
+    mcp2_pts = np.array([[cx_top2 - channelDiameter/2, mcp2Top-topAdj], [cx_top2 + channelDiameter/2, mcp2Top-topAdj],
+                         [cx_bot2 + channelDiameter/2, mcp2Bottom-bottomAdj], [cx_bot2 - channelDiameter/2, mcp2Bottom-bottomAdj]])
     ax.add_patch(patches.Polygon(mcp2_pts, color=channelColor, edgecolor='black', linewidth=0.5))
 
-ax.add_patch(patches.Rectangle((0, 0), width, emptyTopEnd, linewidth=2, edgecolor='black', facecolor='none'))
+ax.add_patch(patches.Rectangle((0, 0), width, backplateBottom, linewidth=2, edgecolor='black', facecolor='none'))
 
 # Initialize pre-allocated Matplotlib artists for blitting
 photon_line, = ax.plot([], [], 'o', color=photonColor, markersize=photonSize, label='Photon')
 electron_lines = [ax.plot([], [], 'o', color=photoelectronColor, markersize=electronSize)[0] for _ in range(MAX_ELECTRONS)]
 electron_lines[0].set_label('Electrons')
 
-# Track state - photon now starts at TOP and moves DOWN
-photon_state = {'active': True, 'x': np.random.uniform(width * 0.2, width * 0.8), 'y': emptyTopEnd}
+# Track state
+photon_state = {'active': True, 'x': np.random.uniform(width * 0.2, width * 0.8), 'y': 0}
 active_electrons = [] # Format: [x, y, vx, vy]
 collision_count = 0
 total_generated = 0
 
-
-
 def get_channel_bounds(x_pos, y_pos):
     """Finds the nearest channel bounds across both MCPs, and checks if strictly inside."""
-    if mcp1Bottom <= y_pos <= mcp1Top:
-        mcp_bottom, is_mcp1 = mcp1Bottom, True
-    elif mcp2Bottom <= y_pos <= mcp2Top:
-        mcp_bottom, is_mcp1 = mcp2Bottom, False
+    if mcp1Top <= y_pos <= mcp1Bottom:
+        mcp_top, is_mcp1 = mcp1Top, True
+    elif mcp2Top <= y_pos <= mcp2Bottom:
+        mcp_top, is_mcp1 = mcp2Top, False
     else:
         return None, None, None, False
 
-    progress = (y_pos - mcp_bottom) / mcpThick
+    progress = (y_pos - mcp_top) / mcpThick
     
     best_idx = None
-    min_dist = float('inf') #!!! 100000 
+    min_dist = float('inf')
     best_left, best_right = 0, 0
     in_hole = False
     
     for i in range(numChannels):
-        cx_bot1 = i * channel_spacing
-        cx_top1 = cx_bot1 + mcpThick * np.tan(mcp1_channel_angle_rad)
+        cx_top1 = i * channel_spacing
+        cx_bot1 = cx_top1 + mcpThick * np.tan(mcp1_channel_angle_rad)
         
         if is_mcp1:
-            cx_center = xOffset + cx_bot1 + progress * (cx_top1 - cx_bot1)
+            cx_center = cx_top1 + progress * (cx_bot1 - cx_top1)
         else:
-            cx_bot2, cx_top2 = cx_top1, cx_top1 + mcpThick * np.tan(mcp2_channel_angle_rad)
-            cx_center = xOffset + cx_bot2 + progress * (cx_top2 - cx_bot2)
+            cx_top2, cx_bot2 = cx_bot1, cx_bot1 + mcpThick * np.tan(mcp2_channel_angle_rad)
+            cx_center = cx_top2 + progress * (cx_bot2 - cx_top2)
             
         left_bound = cx_center - channelDiameter / 2
         right_bound = cx_center + channelDiameter / 2
@@ -197,17 +190,15 @@ def get_channel_bounds(x_pos, y_pos):
             
     return best_idx, best_left, best_right, in_hole
 
-
-
 def process_electron_substep(x, y, vx, vy, dt=1.0):
     """
     Process one sub-step of electron movement with collision detection.
-    Electrons now fall DOWN (negative vy).
+    dt is the fraction of a full timestep (1.0 = full frame, 0.25 = quarter frame)
     """
     global collision_count
     
-    # Scale movement by timestep - acceleration is now NEGATIVE (pulling down)
-    accel = -e_field_acceleration * dt
+    # Scale movement by timestep
+    accel = e_field_acceleration * dt
     next_vy = vy + accel
     next_x = x + vx * dt
     next_y = y + next_vy * dt
@@ -222,33 +213,29 @@ def process_electron_substep(x, y, vx, vy, dt=1.0):
     elif next_x > width:
         next_x, vx = width, -abs(vx)
 
-    # 2. Surface Reflection Checks (flipped directions)
-    # Hitting BOTTOM of MCP1 from above
-    if y >= mcp1Top and next_y < mcp1Top:
-        _, _, _, in_hole = get_channel_bounds(next_x, mcp1Top - 1)
+    # 2. Surface Reflection Checks
+    if y <= mcp1Top and next_y > mcp1Top:
+        _, _, _, in_hole = get_channel_bounds(next_x, mcp1Top + 1)
         if not in_hole:
-            return next_x, mcp1Top + 1, vx, abs(next_vy) * bounceHeightCoeff, False, []
+            return next_x, mcp1Top - 1, vx, -abs(next_vy) * bounceHeightCoeff, False, []
 
-    # Hitting TOP of MCP1 from below
-    if y <= mcp1Bottom and next_y > mcp1Bottom:
-        _, _, _, in_hole = get_channel_bounds(next_x, mcp1Bottom + 1)
+    if y >= mcp1Bottom and next_y < mcp1Bottom:
+        _, _, _, in_hole = get_channel_bounds(next_x, mcp1Bottom - 1)
         if not in_hole:
-            return next_x, mcp1Bottom - 1, vx, -abs(next_vy) * bounceHeightCoeff, False, []
+            return next_x, mcp1Bottom + 1, vx, abs(next_vy) * bounceHeightCoeff, False, []
 
-    # Hitting BOTTOM of MCP2 from above
-    if y >= mcp2Top and next_y < mcp2Top:
-        _, _, _, in_hole = get_channel_bounds(next_x, mcp2Top - 1)
+    if y <= mcp2Top and next_y > mcp2Top:
+        _, _, _, in_hole = get_channel_bounds(next_x, mcp2Top + 1)
         if not in_hole:
-            return next_x, mcp2Top + 1, vx, abs(next_vy) * bounceHeightCoeff, False, []
+            return next_x, mcp2Top - 1, vx, -abs(next_vy) * bounceHeightCoeff, False, []
 
-    # Hitting TOP of MCP2 from below
-    if y <= mcp2Bottom and next_y > mcp2Bottom:
-        _, _, _, in_hole = get_channel_bounds(next_x, mcp2Bottom + 1)
+    if y >= mcp2Bottom and next_y < mcp2Bottom:
+        _, _, _, in_hole = get_channel_bounds(next_x, mcp2Bottom - 1)
         if not in_hole:
-            return next_x, mcp2Bottom - 1, vx, -abs(next_vy) * bounceHeightCoeff, False, []
+            return next_x, mcp2Bottom + 1, vx, abs(next_vy) * bounceHeightCoeff, False, []
 
     # 3. Inside Channels - Wall collision detection
-    if (mcp1Bottom < next_y < mcp1Top) or (mcp2Bottom < next_y < mcp2Top):
+    if (mcp1Top < next_y < mcp1Bottom) or (mcp2Top < next_y < mcp2Bottom):
         idx, left, right, in_hole = get_channel_bounds(next_x, next_y)
         
         if idx is not None and in_hole:
@@ -269,6 +256,7 @@ def process_electron_substep(x, y, vx, vy, dt=1.0):
             
             if prev_in_hole:
                 # Was in a channel, now in gray - went through a wall!
+                # Bounce back from whichever wall we're closer to
                 if next_x < prev_left:
                     # Went through left wall
                     next_x = prev_left + wallTolerance + 5
@@ -294,12 +282,10 @@ def process_electron_substep(x, y, vx, vy, dt=1.0):
             else:
                 sec_vx = np.random.uniform(-bounceSidewaysV, bounceSidewaysV)
             
-            sec_vy = -electronVelocity * np.random.uniform(0, 1)  # Negative (falling down)
+            sec_vy = electronVelocity * np.random.uniform(0,1)
             spawned.append([next_x, next_y, sec_vx, sec_vy])
 
     return next_x, next_y, vx, next_vy, bounced, spawned
-
-
 
 def process_electron(x, y, vx, vy):
     """Process one full frame with sub-stepping."""
@@ -319,25 +305,24 @@ def process_electron(x, y, vx, vy):
         current_vx, current_vy = next_vx, next_vy
         all_spawned.extend(spawned)
         
+        # If we bounced, we already handled it
         if bounced:
-            pass
+            pass  # Could break here if we want only one bounce per frame
     
     return current_x, current_y, current_vx, current_vy, len(all_spawned) > 0, all_spawned
 
 def update(frame):
     global total_generated
 
-    # Update photon - now moving DOWN (negative velocity)
+    # Update photon
     if photon_state['active']:
-        photon_state['y'] -= photonVelocity  # Moving down
-        if photon_state['y'] <= photocathodeTop:
+        photon_state['y'] += photonVelocity
+        if photon_state['y'] >= photocathodeTop:
             photon_state['active'] = False
             photon_line.set_data([100000], [100000])
             
-            # Spawn primary photoelectron with negative y-velocity (falling)
-            active_electrons.append([photon_state['x'], photocathodeBottom, 
-                                   np.random.uniform(-electronVelocity, electronVelocity), 
-                                   -electronVelocity])  # Negative = falling
+            # Spawn primary photoelectron
+            active_electrons.append([photon_state['x'], photocathodeBottom, np.random.uniform(- electronVelocity, electronVelocity), electronVelocity])
             total_generated += 1
         else:
             photon_line.set_data([photon_state['x']], [photon_state['y']])
@@ -350,10 +335,15 @@ def update(frame):
         x, y, vx, vy = active_electrons[i]
         next_x, next_y, next_vx, next_vy, bounced, spawned = process_electron(x, y, vx, vy)
         
-        # Keep electron if it hasn't hit the backplate (now at bottom)
-        if next_y > backplateTop:
+        # Keep electron if it hasn't hit the backplate, or if it reflects
+        if next_y < backplateTop:
             alive_electrons.append([next_x, next_y, next_vx, next_vy])
             new_electrons.extend(spawned)
+        elif np.random.random() < anodeReflectionChance:
+            # Electron reflects from anode - reverse vertical velocity with some energy loss
+            reflected_vy = -abs(next_vy) * 0.6
+            reflected_vx = next_vx + np.random.uniform(-20, 20)
+            alive_electrons.append([next_x, backplateTop - 5, reflected_vx, reflected_vy])
 
     # Add newly generated electrons (respecting the MAX_ELECTRONS cap)
     available_slots = MAX_ELECTRONS - len(alive_electrons)
@@ -374,37 +364,17 @@ def update(frame):
 
     return [photon_line] + electron_lines
 
-
-
 # Create and save animation
 ani = FuncAnimation(fig, update, frames=np.arange(numFrames), blit=True, interval=50)
 ax.legend(loc='upper right', fontsize=8)
 
-# Hide the x axis, it's not accurate
+# Hide the x axis
 ax.get_xaxis().set_visible(False)
-
-# Set the y axis to mm instead of the μm defined in the code
-yμm = ax.get_yticks()
-
-#convert to mm, ignore the last point outside of the plot
-ymm = yμm[:-1]/1000
-
-# fix the photocathode inaccuracy (scale is a lie above the bottom of the photocathode, it's not really 400μm thick)
-yμm[-2] = photocathodeBottom
-ymm[-1] = photocathodeBottom/1000
-
-#put them on the plot 
-ax.set_yticks(yμm[:-1], ymm)
-
-
-
 
 print("Generating Avalanche...")
 
-
-
 ani.save(fileName, writer=PillowWriter(fps=fps))
-print(f"Saving to {filePath}{fileName}...")
+print("Saving...")
 
 print(f"Total Collisions: {collision_count}")
 print(f"Total Electrons Tracked: {total_generated}")
